@@ -13,7 +13,7 @@ public class Router {
 			ServerSocketChannel serverSocketChannel =
 				ServerSocketChannel.open();
 			serverSocketChannel.configureBlocking(false);
-			serverSocketChannel.bind(new InetSocketAddress(host, 1234));
+			serverSocketChannel.bind(new InetSocketAddress(host, 5000));
 			serverSocketChannel.register(selector, SelectionKey.
 				OP_ACCEPT);
 			SelectionKey key = null;
