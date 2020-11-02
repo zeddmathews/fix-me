@@ -1,2 +1,17 @@
 target
 *.class
+.classpath
+.factorypath
+*.project
+.settings
+.vscode
+bin
+
+*.class
+*.project
+target
+.classpath
+.factorypath
+bin
+.settings
+.vscode
