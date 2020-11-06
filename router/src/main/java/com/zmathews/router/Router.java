@@ -7,6 +7,8 @@ import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.*;
 
+import javax.xml.crypto.Data;
+
 public class Router {
 	private static int id_;
 	private AsynchronousServerSocketChannel marketServer;
@@ -120,6 +122,7 @@ public class Router {
 						System.out.println(e.getMessage());
 					}
 				}
+
 				public void failed(Throwable e, DataInstance dataInstance) {
 					System.out.println("Broker failed to connect");
 					e.printStackTrace();
@@ -132,7 +135,97 @@ public class Router {
 	}
 
 	private void initMarket() {
-		//extreme laze
+		try {
+			DataInstance marketData = new DataInstance();
+			marketData.id = id_;
+			marketData.server = marketServer;
+			marketServer.accept(marketData, new CompletionHandler<AsynchronousSocketChannel, DataInstance>(){
+				public void completed(AsynchronousSocketChannel client, DataInstance dataInstance) {
+					try {
+						SocketAddress clientAddr = client.getRemoteAddress();
+						System.out.format("\u001b[32mAccepted a connection from %s%n\u001b[0m", clientAddr);
+						dataInstance.server.accept(dataInstance, this);
+						DataInstance newInstance = new DataInstance();
+						newInstance.id = Router.incId();
+						newInstance.server = dataInstance.server;
+						newInstance.client = client;
+						newInstance.buffer = ByteBuffer.allocate(2048);
+						newInstance.isRead = false;
+						newInstance.cliAddress = clientAddr;
+						Charset cs = Charset.forName("UTF-8");
+						String msg = "ID|" + Integer.toString(newInstance.id);
+						newInstance.buffer.clear();
+						byte[] data = msg.getBytes(cs);
+						newInstance.buffer.put(data);
+						newInstance.buffer.flip();
+						markets.put(newInstance.id, newInstance);
+						newInstance.client.write(newInstance.buffer);
+						Router.clearBuffer(newInstance);
+						newInstance.client.read(newInstance.buffer, newInstance, new CompletionHandler<Integer, DataInstance>() {
+							public void completed(Integer result, DataInstance dataInstance) {
+								if (result == -1) {
+									try {
+										dataInstance.client.close();
+										System.out.format("\u001b[31mStopped listening to the Market %s ID %s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id);
+									}
+									catch (IOException ex) {
+										ex.printStackTrace();
+									}
+									return ;
+								}
+								if (dataInstance.isRead) {
+									dataInstance.buffer.flip();
+									int limits = dataInstance.buffer.limit();
+									byte bytes[] = new byte[limits];
+									dataInstance.buffer.get(bytes, 0, limits);
+									Charset cs = Charset.forName("UTF-8");
+									String msg = new String(bytes, cs);
+									System.out.format("\u001b[36mMarket(%s) ID(%s): 10000|%s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id, msg);
+									String[] parts = msg.split("\\|");
+									if (parts.length == 4) {
+										int brokerID = Integer.parseInt(parts[0]);
+										int checksum = Integer.parseInt(parts[3]);
+										int msglen = parts[0].length() + parts[1].length() + parts[2].length() + 2;
+										if (checksum - 22 == msglen) {
+											if (writeToBroker(msg, brokerID) == 0) {
+												String newMsg = "Broker: " + parts[0] + " Does not exist";
+												writeToMarket(newMsg, Integer.parseInt(parts[1]));
+											}
+										}
+										dataInstance.buffer.clear();
+										byte[] data = msg.getBytes(cs);
+										dataInstance.buffer.put(data);
+										dataInstance.buffer.flip();
+										dataInstance.isRead = false;
+										Router.clearBuffer(dataInstance);
+									}
+								}
+								else {
+									dataInstance.isRead = true;
+									dataInstance.buffer.clear();
+									dataInstance.client.read(dataInstance.buffer, dataInstance, this);
+								}
+							}
+
+							public void failed(Throwable e, DataInstance dataInstance) {
+								e.printStackTrace();
+							}
+						});
+					}
+					catch(IOException e) {
+						e.printStackTrace();
+					}
+				}
+				public void failed(Throwable e, DataInstance dataInstance)
+				{
+					System.out.println("Failed to accept connection!");
+					e.printStackTrace();
+				}
+			});
+		}
+		catch(Exception e) {
+			System.out.println(e.getMessage());
+		}
 	}
 
 	private class DataInstance {
@@ -170,7 +263,54 @@ public class Router {
 			market.isRead = true;
 			try {
 				market.client.read(market.buffer, market, new CompletionHandler<Integer,DataInstance>(){
-					//am laze
+					public void completed(Integer result, DataInstance dataInstance) {
+						if (result == -1) {
+							try {
+								dataInstance.client.close();
+								System.out.format("\u001b[31mStopped listening to the Market %s ID %s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id);
+							}
+							catch (IOException ex) {
+								ex.printStackTrace();
+							}
+							return ;
+						}
+						if (dataInstance.isRead) {
+							dataInstance.buffer.flip();
+							int limits = dataInstance.buffer.limit();
+							byte bytes[] = new byte[limits];
+							dataInstance.buffer.get(bytes, 0, limits);
+							Charset cs = Charset.forName("UTF-8");
+							String msg = new String(bytes, cs);
+							System.out.format("\u001b[36mMarket(%s) ID(%s): 10000|%s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id, msg);
+							String[] parts = msg.split("\\|");
+							if (parts.length == 4) {
+								int brokerID = Integer.parseInt(parts[0]);
+								int checksum = Integer.parseInt(parts[3]);
+								int msglen = parts[0].length() + parts[1].length() + parts[2].length() + 2;
+								if (checksum - 22 == msglen) {
+									if (writeToBroker(msg, brokerID) == 0) {
+										String newMsg = "Broker: " + parts[0] + " Does not exist";
+										writeToMarket(newMsg, Integer.parseInt(parts[1]));
+									}
+								}
+								dataInstance.buffer.clear();
+								byte[] data = msg.getBytes(cs);
+								dataInstance.buffer.put(data);
+								dataInstance.buffer.flip();
+								dataInstance.isRead = false;
+								Router.clearBuffer(dataInstance);
+							}
+						}
+						else {
+							dataInstance.isRead = true;
+							dataInstance.buffer.clear();
+							dataInstance.client.read(dataInstance.buffer, dataInstance, this);
+						}
+					}
+
+					public void failed(Throwable e, DataInstance dataInstance) {
+						e.printStackTrace();
+					}
 				});
 			}
 			catch(ReadPendingException e) {
