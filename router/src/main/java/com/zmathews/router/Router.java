@@ -7,8 +7,6 @@ import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.*;
 
-import javax.xml.crypto.Data;
-
 public class Router {
 	private static int id_;
 	private AsynchronousServerSocketChannel marketServer;
@@ -85,16 +83,16 @@ public class Router {
 									Charset cs = Charset.forName("UTF-8");
 									String msg = new String(bytes, cs);
 									System.out.format("\u001b[33mBroker(%s) ID(%s): %s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id, msg);
-									String[] parts = msg.split("\\|");
-									if (parts.length == 7) {
-										int marketID = Integer.parseInt(parts[0]);
-										int price = Integer.parseInt(parts[3]);
-										int checksum = Integer.parseInt(parts[6]);
-										int msglen = parts[0].length() + parts[1].length() + parts[2].length() + parts[3].length() + parts[4].length() + parts[5].length() + 5;
+									String[] shards = msg.split("\\|");
+									if (shards.length == 7) {
+										int marketID = Integer.parseInt(shards[0]);
+										int price = Integer.parseInt(shards[3]);
+										int checksum = Integer.parseInt(shards[6]);
+										int msglen = shards[0].length() + shards[1].length() + shards[2].length() + shards[3].length() + shards[4].length() + shards[5].length() + 5;
 										if (checksum - price == msglen) {
 											if (writeToMarket(msg, marketID) == 0) {
-												String newMsg = "Market: " + parts[0] + " Does not exist";
-												writeToBroker(newMsg, Integer.parseInt(parts[5]));
+												String newMsg = "Market: " + shards[0] + " Does not exist";
+												writeToBroker(newMsg, Integer.parseInt(shards[5]));
 												return ;
 											}
 										}
@@ -181,15 +179,15 @@ public class Router {
 									Charset cs = Charset.forName("UTF-8");
 									String msg = new String(bytes, cs);
 									System.out.format("\u001b[36mMarket(%s) ID(%s): 10000|%s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id, msg);
-									String[] parts = msg.split("\\|");
-									if (parts.length == 4) {
-										int brokerID = Integer.parseInt(parts[0]);
-										int checksum = Integer.parseInt(parts[3]);
-										int msglen = parts[0].length() + parts[1].length() + parts[2].length() + 2;
+									String[] shards = msg.split("\\|");
+									if (shards.length == 4) {
+										int brokerID = Integer.parseInt(shards[0]);
+										int checksum = Integer.parseInt(shards[3]);
+										int msglen = shards[0].length() + shards[1].length() + shards[2].length() + 2;
 										if (checksum - 22 == msglen) {
 											if (writeToBroker(msg, brokerID) == 0) {
-												String newMsg = "Broker: " + parts[0] + " Does not exist";
-												writeToMarket(newMsg, Integer.parseInt(parts[1]));
+												String newMsg = "Broker: " + shards[0] + " Does not exist";
+												writeToMarket(newMsg, Integer.parseInt(shards[1]));
 											}
 										}
 										dataInstance.buffer.clear();
@@ -282,15 +280,15 @@ public class Router {
 							Charset cs = Charset.forName("UTF-8");
 							String msg = new String(bytes, cs);
 							System.out.format("\u001b[36mMarket(%s) ID(%s): 10000|%s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id, msg);
-							String[] parts = msg.split("\\|");
-							if (parts.length == 4) {
-								int brokerID = Integer.parseInt(parts[0]);
-								int checksum = Integer.parseInt(parts[3]);
-								int msglen = parts[0].length() + parts[1].length() + parts[2].length() + 2;
+							String[] shards = msg.split("\\|");
+							if (shards.length == 4) {
+								int brokerID = Integer.parseInt(shards[0]);
+								int checksum = Integer.parseInt(shards[3]);
+								int msglen = shards[0].length() + shards[1].length() + shards[2].length() + 2;
 								if (checksum - 22 == msglen) {
 									if (writeToBroker(msg, brokerID) == 0) {
-										String newMsg = "Broker: " + parts[0] + " Does not exist";
-										writeToMarket(newMsg, Integer.parseInt(parts[1]));
+										String newMsg = "Broker: " + shards[0] + " Does not exist";
+										writeToMarket(newMsg, Integer.parseInt(shards[1]));
 									}
 								}
 								dataInstance.buffer.clear();
@@ -355,16 +353,16 @@ public class Router {
 							Charset cs = Charset.forName("UTF-8");
 							String msg = new String(bytes, cs);
 							System.out.format("\u001b[33mBroker(%s) ID(%s): %s%n\u001b[0m", dataInstance.cliAddress, dataInstance.id, msg);
-							String[] parts = msg.split("\\|");
-							if (parts.length == 7) {
-								int marketID = Integer.parseInt(parts[0]);
-								int price = Integer.parseInt(parts[3]);
-								int checksum = Integer.parseInt(parts[6]);
-								int msglen = parts[0].length() + parts[1].length() + parts[2].length() + parts[3].length() + parts[4].length() + parts[5].length() + 5;
+							String[] shards = msg.split("\\|");
+							if (shards.length == 7) {
+								int marketID = Integer.parseInt(shards[0]);
+								int price = Integer.parseInt(shards[3]);
+								int checksum = Integer.parseInt(shards[6]);
+								int msglen = shards[0].length() + shards[1].length() + shards[2].length() + shards[3].length() + shards[4].length() + shards[5].length() + 5;
 								if (checksum - price == msglen) {
 									if (writeToMarket(msg, marketID) == 0) {
-										String newMsg = "Market: " + parts[0] + " Does not exist";
-										writeToBroker(newMsg, Integer.parseInt(parts[5]));
+										String newMsg = "Market: " + shards[0] + " Does not exist";
+										writeToBroker(newMsg, Integer.parseInt(shards[5]));
 										return ;
 									}
 								}
